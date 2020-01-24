@@ -1,0 +1,85 @@
+---
+title: "DataAnalysis.Rmd"
+author: "Meg Britt"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Load the required libraries for this activity.
+```{r}
+library("ggplot2")
+library("knitr")
+library("dplyr")
+```
+Import the data that was created in Part 1, and remove unnecessary column.
+```{r}
+Mdata<-read.csv("Data/measurements.csv")
+Mdata$X<-NULL
+```
+
+Rename the columns to three letter abbreviations for simplicity and transform values to one matching unit.
+```{r}
+Mdata2<-rename(Mdata,Spc.=Species,wdt.=limb.width, lth.=limb.length, w.un=unitsW, l.un=unitsL)
+Mdata2$w.un <- "cm"
+Mdata2$wdt.<-if_else(Mdata2$w.un=="mm", Mdata2$wdt.*10, Mdata2$wdt.)
+Mdata2$w.un <- "cm"
+Mdata2$lth.<-if_else(Mdata2$l.un=="mm", Mdata2$lth.*10, Mdata2$lth.)
+Mdata2$l.un <- "cm"
+```
+
+
+Calculate the volume of limbs.
+```{r}
+Mdata2$Volume <- with(Mdata2, pi*(((wdt.)/2)^2)*(lth.))
+```
+Group the species based on whether their limb width is above or below 10 cm and create a new bject for these groups.
+
+
+```{r}
+Mdata2$group<-ifelse(Mdata2$wdt. >10, ">10cm.width","<10cm.width")
+X <- group_by(Mdata2, group)
+```
+Create a new object that summarizes the data by group type.
+```{r}
+Y <- summarise(X, Volume_Avg=mean(Volume), Volume_SD= sd(Volume), Length_Avg=mean(lth.), Length_SD = sd(lth.), Width_Avg = mean(wdt.), Width_SD = sd(wdt.))
+```
+
+Create a table for measurements of all species.
+```{r}
+kable(Y, caption = "Table 1: Average (Avg) and Standard Deviation (SD) of Volume, Length, and Width for Species with above and below limb width of 10cm")
+```
+
+
+Plot the length and width data for all species.
+```{r}
+ggplot(data = Mdata2, aes(x=lth., y=wdt.)) + geom_point(size = 4) + theme_classic() + ggtitle("Limb Dimensions for Various Species") + theme(plot.title = element_text(hjust = 0.5)) + labs(x = "Limb Length (cm)", y = "Limb Width (cm)")
+```
+
+
+Calculate the average limb volume for all species.
+```{r}
+Volume.avg <- mean(Mdata2$Volume)
+```
+Pull out the volume data only for species that have above average limb volume
+```{r}
+Above.avg.Vol <- filter(Mdata2, Volume > Volume.avg)
+```
+
+Plot width and length only for species that have aboveaverage volume.
+```{r}
+ggplot(data = Above.avg.Vol, aes(x=lth., y=wdt.)) + geom_point(size = 4) + theme_classic() + ggtitle("Limb Dimensions for Species with Above Average Limb Volume") + theme(plot.title = element_text(hjust = 0.5)) + labs(x = "Limb Length (cm)", y = "Limb Width (cm)")
+```
+
+
+Pull out the volume data only for species that have a below average volume.
+```{r}
+Below.avg.Vol <- filter(Mdata2, Volume < Volume.avg)
+```
+Create a new object that only includes species data and volume for species with below average volume and display in a table.
+```{r}
+Vol.below.avg.spc.only <- Below.avg.Vol[c("Spc.","Volume")]
+kable(Vol.below.avg.spc.only, caption = "Table 2: Volume for species with below average volume")
+```
